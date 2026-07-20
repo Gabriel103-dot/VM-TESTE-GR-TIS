@@ -8,15 +8,12 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Baixando e Configurando o Ngrok via WinGet
+    - name: Configurando o Ngrok e Ambiente
       run: |
-        # Instala o ngrok de forma oficial e silenciosa pelo gerenciador do Windows
-        winget install ngrok.ngrok --accept-source-agreements --accept-package-agreements
+        # Instala o ngrok usando o Chocolatey de forma limpa
+        choco install ngrok -y
         
-        # Recarrega as variáveis de ambiente para o PowerShell encontrar o comando ngrok
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        
-        # Aplica o token de autenticação
+        # Define o token de autenticação diretamente
         ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
       shell: powershell
 
@@ -29,11 +26,35 @@ jobs:
 
     - name: Criando Túnel de Conexão
       run: |
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
         Start-Process ngrok -ArgumentList "tcp 3389"
       shell: powershell
 
     - name: Kit de Otimização e Tweaks para Jogos/Desempenho
+      run: |
+        Write-Host "Limpando arquivos temporários para maximizar espaço livre..."
+        Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+        
+        Write-Host "Instalando Componentes Essenciais para Jogos..."
+        choco install vcredist-all directx -y
+      shell: powershell
+
+    - name: Obter Dados de Login
+      run: |
+        Start-Sleep -Seconds 5
+        $connections = Invoke-RestMethod http://localhost:4040/api/tunnels
+        $address = $connections.tunnels.public_url -replace "tcp://", ""
+        Write-Host "=========================================================="
+        Write-Host "CONECTE-SE VIA RDP (CONEXÃO DE ÁREA DE TRABALHO REMOTA)"
+        Write-Host "Endereço IP: $address"
+        Write-Host "Usuário: runneradmin"
+        Write-Host "=========================================================="
+      shell: powershell
+
+    - name: Manter VM Viva
+      run: |
+        $ServerLoop = Start-Job -ScriptBlock { while ($true) { Start-Sleep -Seconds 60 } }
+        Wait-Job $ServerLoop
+      shell: powershell
       run: |
         Write-Host "Limpando arquivos temporários para maximizar espaço livre..."
         Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue

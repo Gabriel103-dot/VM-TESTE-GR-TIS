@@ -29,14 +29,15 @@ jobs:
         Start-Process ngrok -ArgumentList "tcp 3389"
       shell: powershell
 
-    - name: Kit de Otimização e Tweaks para Jogos/Desempenho
+    -     - name: Kit de Otimização e Tweaks para Jogos/Desempenho
       run: |
         Write-Host "Limpando arquivos temporários para maximizar espaço livre..."
         Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
         
-        Write-Host "Instalando Componentes Essenciais para Jogos..."
-        choco install vcredist-all directx -y
+        Write-Host "Instalando Componentes Essenciais..."
+        choco install vcredist-all -y
       shell: powershell
+
 
     - name: Obter Dados de Login
       run: |

@@ -8,11 +8,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Baixando e Configurando o Ngrok
+    - name: Configurando o Ngrok e Ambiente
       run: |
-        Invoke-WebRequest https://bin.equinox.io/c/b3Ut3qqWZgX/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
-        Expand-Archive ngrok.zip
-        ./ngrok/ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+        # Instala o ngrok usando o Chocolatey de forma limpa
+        choco install ngrok -y
+        
+        # Define o token de autenticação diretamente
+        ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
       shell: powershell
 
     - name: Ativando o Acesso Remoto (RDP)
@@ -24,7 +26,7 @@ jobs:
 
     - name: Criando Túnel de Conexão
       run: |
-        Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389"
+        Start-Process ngrok -ArgumentList "tcp 3389"
       shell: powershell
 
     - name: Kit de Otimização e Tweaks para Jogos/Desempenho
@@ -32,8 +34,27 @@ jobs:
         Write-Host "Limpando arquivos temporários para maximizar espaço livre..."
         Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
         
-        Write-Host "Instalando Gerenciador de Pacotes Chocolatey..."
-        Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        Write-Host "Instalando Componentes Essenciais para Jogos..."
+        choco install vcredist-all directx -y
+      shell: powershell
+
+    - name: Obter Dados de Login
+      run: |
+        Start-Sleep -Seconds 5
+        $connections = Invoke-RestMethod http://localhost:4040/api/tunnels
+        $address = $connections.tunnels.public_url -replace "tcp://", ""
+        Write-Host "=========================================================="
+        Write-Host "CONECTE-SE VIA RDP (CONEXÃO DE ÁREA DE TRABALHO REMOTA)"
+        Write-Host "Endereço IP: $address"
+        Write-Host "Usuário: runneradmin"
+        Write-Host "=========================================================="
+      shell: powershell
+
+    - name: Manter VM Viva
+      run: |
+        $ServerLoop = Start-Job -ScriptBlock { while ($true) { Start-Sleep -Seconds 60 } }
+        Wait-Job $ServerLoop
+      shell: powershell
         
         Write-Host "Instalando Componentes Essenciais para Jogos e Scripts..."
         choco install vcredist-all directx -y

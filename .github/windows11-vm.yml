@@ -25,15 +25,35 @@ jobs:
       shell: powershell
 
     - name: Criando Tunnel e Buscando Dados de Login
-        - name: Criando Tunnel e Buscando Dados de Login
       run: |
-        # Inicializa o ngrok definindo o protocolo e a região explicitamente em segundo plano
+        # Inicializa o ngrok forçando os argumentos corretos em segundo plano
         Start-Process ngrok -ArgumentList "tcp 3389 --region sa" -NoNewWindow
         
-        # Espera o túnel estabelecer conexão com os servidores do ngrok
+        # Espera 30 segundos para o túnel estabilizar e gerar o IP
         Start-Sleep -Seconds 30
         
         # Puxa o link gerado diretamente da API local
+        $connections = Invoke-RestMethod http://localhost:4040/api/tunnels
+        $address = $connections.tunnels.public_url -replace "tcp://", ""
+        
+        Write-Host "=========================================================="
+        Write-Host "CONECTE-SE VIA RDP (CONEXÃO DE ÁREA DE TRABALHO REMOTA)"
+        Write-Host "Endereço IP: $address"
+        Write-Host "Usuário: runneradmin"
+        Write-Host "=========================================================="
+      shell: powershell
+
+    - name: Kit de Otimização e Tweaks
+      run: |
+        Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+        choco install vcredist-all -y
+      shell: powershell
+
+    - name: Manter VM Viva
+      run: |
+        $ServerLoop = Start-Job -ScriptBlock { while ($true) { Start-Sleep -Seconds 60 } }
+        Wait-Job $ServerLoop
+      shell: powershell
         $connections = Invoke-RestMethod http://localhost:4040/api/tunnels
         $address = $connections.tunnels.public_url -replace "tcp://", ""
         

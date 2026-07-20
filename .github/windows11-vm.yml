@@ -8,12 +8,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Baixando e Configurando o Ngrok
+    - name: Baixando e Configurando o Ngrok via WinGet
       run: |
-        # Usando o link direto oficial e mais estável do Ngrok
-        Invoke-WebRequest https://bin.equinox.io/c/b3Ut3qqWZgX/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-        Expand-Archive ngrok.zip -DestinationPath .\ngrok
-        ./ngrok/ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+        # Instala o ngrok de forma oficial e silenciosa pelo gerenciador do Windows
+        winget install ngrok.ngrok --accept-source-agreements --accept-package-agreements
+        
+        # Recarrega as variáveis de ambiente para o PowerShell encontrar o comando ngrok
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        
+        # Aplica o token de autenticação
+        ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
       shell: powershell
 
     - name: Ativando o Acesso Remoto (RDP)
@@ -25,7 +29,8 @@ jobs:
 
     - name: Criando Túnel de Conexão
       run: |
-        Start-Process ./ngrok/ngrok.exe -ArgumentList "tcp 3389"
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        Start-Process ngrok -ArgumentList "tcp 3389"
       shell: powershell
 
     - name: Kit de Otimização e Tweaks para Jogos/Desempenho
@@ -34,6 +39,29 @@ jobs:
         Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
         
         Write-Host "Instalando Gerenciador de Pacotes Chocolatey..."
+        Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        
+        Write-Host "Instalando Componentes Essenciais para Jogos e Scripts..."
+        choco install vcredist-all directx -y
+      shell: powershell
+
+    - name: Obter Dados de Login
+      run: |
+        Start-Sleep -Seconds 5
+        $connections = Invoke-RestMethod http://localhost:4040/api/tunnels
+        $address = $connections.tunnels.public_url -replace "tcp://", ""
+        Write-Host "=========================================================="
+        Write-Host "CONECTE-SE VIA RDP (CONEXÃO DE ÁREA DE TRABALHO REMOTA)"
+        Write-Host "Endereço IP: $address"
+        Write-Host "Usuário: runneradmin"
+        Write-Host "=========================================================="
+      shell: powershell
+
+    - name: Manter VM Viva
+      run: |
+        $ServerLoop = Start-Job -ScriptBlock { while ($true) { Start-Sleep -Seconds 60 } }
+        Wait-Job $ServerLoop
+      shell: powershell
         Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
         
         Write-Host "Instalando Componentes Essenciais para Jogos e Scripts..."

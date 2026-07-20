@@ -24,15 +24,15 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
       shell: powershell
 
-    - name: Criando Tunnel e Buscando Dados de Login
+    -     - name: Criando Tunnel e Buscando Dados de Login
       run: |
-        # Inicia o processo do ngrok em segundo plano
-        Start-Process ngrok -ArgumentList "tcp 3389"
+        # Inicializa o ngrok definindo o protocolo e a região explicitamente em segundo plano
+        Start-Process ngrok -ArgumentList "tcp 3389 --region sa" -NoNewWindow
         
-        # Espera 30 segundos exatos para o ngrok gerar o endereço de IP sem pressa
+        # Espera o túnel estabelecer conexão com os servidores do ngrok
         Start-Sleep -Seconds 30
         
-        # Puxa o link gerado diretamente da API local do ngrok
+        # Puxa o link gerado diretamente da API local
         $connections = Invoke-RestMethod http://localhost:4040/api/tunnels
         $address = $connections.tunnels.public_url -replace "tcp://", ""
         
@@ -42,6 +42,7 @@ jobs:
         Write-Host "Usuário: runneradmin"
         Write-Host "=========================================================="
       shell: powershell
+
 
     - name: Kit de Otimização e Tweaks
       run: |

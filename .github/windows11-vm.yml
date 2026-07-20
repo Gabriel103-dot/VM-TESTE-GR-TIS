@@ -24,16 +24,39 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
       shell: powershell
 
-    -     - name: Criando Túnel de Conexão e Gerando Login
+    - name: Criando Túnel de Conexão e Gerando Login
       run: |
         # Inicia o ngrok forçando a criação do túnel TCP
-        Start-Process ngrok -ArgumentList "tcp --region sa 3389"
+        Start-Process ngrok -ArgumentList "tcp 3389"
         
-        # Aguarda o tempo necessário para o serviço subir totalmente
-        Start-Sleep -Seconds 20
+        # Aguarda o tempo necessário para o serviço subir totalmente na máquina
+        Start-Sleep -Seconds 30
         
-        # Puxa os dados do túnel local
+        # Puxa os dados do túnel local de forma segura
         $connections = Invoke-RestMethod http://localhost:4040/api/tunnels
+        $address = $connections.tunnels.public_url -replace "tcp://", ""
+        
+        Write-Host "=========================================================="
+        Write-Host "CONECTE-SE VIA RDP (CONEXÃO DE ÁREA DE TRABALHO REMOTA)"
+        Write-Host "Endereço IP: $address"
+        Write-Host "Usuário: runneradmin"
+        Write-Host "=========================================================="
+      shell: powershell
+
+    - name: Kit de Otimização e Tweaks
+      run: |
+        Write-Host "Limpando arquivos temporários para maximizar espaço livre..."
+        Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+        
+        Write-Host "Instalando Componentes Essenciais..."
+        choco install vcredist-all -y
+      shell: powershell
+
+    - name: Manter VM Viva
+      run: |
+        $ServerLoop = Start-Job -ScriptBlock { while ($true) { Start-Sleep -Seconds 60 } }
+        Wait-Job $ServerLoop
+      shell: powershell
         $address = $connections.tunnels.public_url -replace "tcp://", ""
         
         Write-Host "=========================================================="

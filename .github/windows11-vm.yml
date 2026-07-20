@@ -39,9 +39,10 @@ jobs:
       shell: powershell
 
 
-    - name: Obter Dados de Login
+    -    - name: Obter Dados de Login
       run: |
-        Start-Sleep -Seconds 5
+        # Dá um tempo maior para o Ngrok abrir o túnel em segundo plano
+        Start-Sleep -Seconds 15
         $connections = Invoke-RestMethod http://localhost:4040/api/tunnels
         $address = $connections.tunnels.public_url -replace "tcp://", ""
         Write-Host "=========================================================="
@@ -50,6 +51,7 @@ jobs:
         Write-Host "Usuário: runneradmin"
         Write-Host "=========================================================="
       shell: powershell
+
 
     - name: Manter VM Viva
       run: |
